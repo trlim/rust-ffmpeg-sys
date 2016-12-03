@@ -20,6 +20,10 @@ fn output() -> PathBuf {
 	PathBuf::from(env::var("OUT_DIR").unwrap())
 }
 
+fn target() -> String {
+	env::var("TARGET").expect("TARGET was not set")
+}
+
 fn source() -> PathBuf {
 	output().join(format!("ffmpeg-{}", version()))
 }
@@ -51,12 +55,21 @@ fn fetch() -> io::Result<()> {
 }
 
 fn build() -> io::Result<()> {
-	let mut configure = Command::new("./configure");
+	let mut configure = Command::new("sh");
 	configure.current_dir(&source());
+	configure.arg("configure");
 	configure.arg(format!("--prefix={}", search().to_string_lossy()));
 
-	if env::var("TARGET").unwrap() != env::var("HOST").unwrap() {
-		configure.arg(format!("--cross-prefix={}-", env::var("TARGET").unwrap()));
+	if target() != env::var("HOST").unwrap() {
+		configure.arg(format!("--cross-prefix={}-", target()));
+	}
+
+	if cfg!(windows) {
+		if target().contains("msvc") {
+			configure.arg("--toolchain=msvc");
+		}
+		configure.arg("--disable-pthreads");
+		configure.arg("--enable-w32threads");
 	}
 
 	// control debug build
@@ -329,7 +342,11 @@ fn main() {
 			println!("cargo:rustc-link-lib=z");
 		}
 
-		if fs::metadata(&search().join("lib").join("libavutil.a")).is_err() {
+		if fs::metadata(&search()
+				.join("lib")
+				.join(if target().contains("msvc") { "libavutil.lib" } else { "libavutil.a" })
+			)
+			.is_err() {
 			fs::create_dir_all(&output()).ok().expect("failed to create build directory");
 			fetch().unwrap();
 			build().unwrap();
@@ -379,6 +396,12 @@ fn main() {
 		];
 		for f in frameworks {
 			println!("cargo:rustc-link-lib=framework={}", f);
+		}
+	}
+	if cfg!(windows) {
+		if target().contains("gnu") {
+			println!("cargo:rustc-link-search=native=C:\\msys64\\mingw64\\lib");
+			println!("cargo:rustc-link-search=native=C:\\msys64\\usr\\lib\\w32api");
 		}
 	}
 

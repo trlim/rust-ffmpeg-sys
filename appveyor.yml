@@ -1,0 +1,29 @@
+environment:
+  matrix:
+  - TARGET: x86_64-pc-windows-gnu
+  - TARGET: x86_64-pc-windows-msvc
+  # - TARGET: i686-pc-windows-gnu
+  - TARGET: i686-pc-windows-msvc
+
+os: Visual Studio 2015
+
+install:
+  - set
+  - set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\
+  - set PATH=%PATH%;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\usr\bin
+  - if %TARGET%==x86_64-pc-windows-msvc call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
+  - if %TARGET%==i686-pc-windows-msvc call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+  - curl -sSf -o rustup-init.exe https://win.rustup.rs/
+  - rustup-init.exe -y --default-host %TARGET%
+  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - rustc -V
+  - cargo -V
+  - cinst yasm
+  - yasm --version
+  - set PATH=%PATH%;C:\msys64\usr\bin
+  - path
+
+build: false
+
+test_script:
+  - cargo build --features build
