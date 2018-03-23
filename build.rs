@@ -433,6 +433,34 @@ fn search_include(include_paths: &Vec<PathBuf>, header: &str) -> String {
     format!("/usr/include/{}", header)
 }
 
+fn generate_link_libs(statik: bool) {
+    let ffmpeg_ty = if statik { "static" } else { "dylib" };
+
+    // Make sure to link with the ffmpeg libs we built
+    println!("cargo:rustc-link-lib={}=avutil", ffmpeg_ty);
+    if env::var("CARGO_FEATURE_AVCODEC").is_ok() {
+        println!("cargo:rustc-link-lib={}=avcodec", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_AVFORMAT").is_ok() {
+        println!("cargo:rustc-link-lib={}=avformat", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_AVFILTER").is_ok() {
+        println!("cargo:rustc-link-lib={}=avfilter", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_AVDEVICE").is_ok() {
+        println!("cargo:rustc-link-lib={}=avdevice", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_AVRESAMPLE").is_ok() {
+        println!("cargo:rustc-link-lib={}=avresample", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_SWSCALE").is_ok() {
+        println!("cargo:rustc-link-lib={}=swscale", ffmpeg_ty);
+    }
+    if env::var("CARGO_FEATURE_SWRESAMPLE").is_ok() {
+        println!("cargo:rustc-link-lib={}=swresample", ffmpeg_ty);
+    }
+}
+
 fn main() {
     let statik = env::var("CARGO_FEATURE_STATIC").is_ok();
 
@@ -442,31 +470,7 @@ fn main() {
             search().join("lib").to_string_lossy()
         );
 
-        let ffmpeg_ty = if statik { "static" } else { "dylib" };
-
-        // Make sure to link with the ffmpeg libs we built
-        println!("cargo:rustc-link-lib={}=avutil", ffmpeg_ty);
-        if env::var("CARGO_FEATURE_AVCODEC").is_ok() {
-            println!("cargo:rustc-link-lib={}=avcodec", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_AVFORMAT").is_ok() {
-            println!("cargo:rustc-link-lib={}=avformat", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_AVFILTER").is_ok() {
-            println!("cargo:rustc-link-lib={}=avfilter", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_AVDEVICE").is_ok() {
-            println!("cargo:rustc-link-lib={}=avdevice", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_AVRESAMPLE").is_ok() {
-            println!("cargo:rustc-link-lib={}=avresample", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_SWSCALE").is_ok() {
-            println!("cargo:rustc-link-lib={}=swscale", ffmpeg_ty);
-        }
-        if env::var("CARGO_FEATURE_SWRESAMPLE").is_ok() {
-            println!("cargo:rustc-link-lib={}=swresample", ffmpeg_ty);
-        }
+        generate_link_libs(statik);
 
         if env::var("CARGO_FEATURE_BUILD_ZLIB").is_ok() && cfg!(target_os = "linux") {
             println!("cargo:rustc-link-lib=z");
@@ -511,6 +515,13 @@ fn main() {
             "cargo:rustc-link-search=native={}",
             ffmpeg_dir.join("lib").to_string_lossy()
         );
+
+        generate_link_libs(statik);
+
+        if cfg!(target_os = "linux") {
+            println!("cargo:rustc-link-lib=crypto");
+            println!("cargo:rustc-link-lib=z");
+        }
 
         vec![ffmpeg_dir.join("include")]
     }
