@@ -378,7 +378,8 @@ fn check_features(
         }
 
         let var_str = format!("[{var}]", var = var);
-        let pos = stdout.find(&var_str).expect("Variable not found in output") + var_str.len();
+        let pos = stdout.find(&var_str).expect(&format!("Variable {} not found in output", &var_str))
+                + var_str.len();
         if &stdout[pos..pos + 1] == "1" {
             println!(r#"cargo:rustc-cfg=feature="{}""#, var.to_lowercase());
             println!(r#"cargo:{}=true"#, var.to_lowercase());
@@ -408,7 +409,7 @@ fn check_features(
                 );
                 let pos = stdout
                     .find(&search_str)
-                    .expect("Variable not found in output")
+                    .expect(&format!("Variable {} not found in output", &search_str))
                     + search_str.len();
 
                 if &stdout[pos..pos + 1] == "1" {
